@@ -1,6 +1,7 @@
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("ProxyTests")]
 
-// Cargar .env automáticamente si existe
+// Cargar .env automáticamente si existe — collect vars for UI logging
+var envVars = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 string envPath = Path.Combine(AppContext.BaseDirectory, ".env");
 if (!File.Exists(envPath))
 {
@@ -8,7 +9,6 @@ if (!File.Exists(envPath))
 }
 if (File.Exists(envPath))
 {
-    Console.WriteLine($"📄 Loading configuration from: {envPath}");
     foreach (string line in File.ReadAllLines(envPath))
     {
         string trimmed = line.Trim();
@@ -20,7 +20,10 @@ if (File.Exists(envPath))
         string key = trimmed[..eq].Trim();
         string value = trimmed[(eq + 1)..].Trim().Trim('"');
         if (!string.IsNullOrEmpty(key))
+        {
             Environment.SetEnvironmentVariable(key, value);
+            envVars[key] = value;
+        }
     }
 }
 
@@ -41,29 +44,37 @@ builder.Services.AddSingleton<OllamaResponseBuilder>();
 builder.Services.AddSingleton<ChatStreamingService>();
 
 builder.Services.AddHostedService<ProviderBenchmarkService>();
+builder.Services.AddSingleton<AiProxyHub.TextWriterLoggerProvider>();
+builder.Services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<AiProxyHub.TextWriterLoggerProvider>());
 
 WebApplication app = builder.Build();
 app.UseOptionalProxyAuthentication(proxyApiKey);
 
 ModelCatalogService modelCatalog = app.Services.GetRequiredService<ModelCatalogService>();
-ProviderRegistry providerRegistry = app.Services.GetRequiredService<ProviderRegistry>();
 await modelCatalog.RefreshAvailableModels(CancellationToken.None);
 
 app.MapOpenAiEndpoints();
 app.MapOllamaEndpoints();
 app.MapHealthEndpoints();
 
-Console.WriteLine($"╔══════════════════════════════════════════════════════════════════╗");
-Console.WriteLine($"║   DeepSeek / Multi-Provider Copilot Proxy (Ultra)               ║");
-Console.WriteLine($"╠══════════════════════════════════════════════════════════════════╣");
-Console.WriteLine($"║  Version: 2026.06.02                                             ║");
-Console.WriteLine($"║  Default: {providerRegistry.DefaultModel,-32}                                  ║");
-Console.WriteLine($"║  Providers: {string.Join(", ", providerRegistry.Providers.Select(pv => pv.Name)),-32}                          ║");
-Console.WriteLine($"║  Models:   {string.Join(", ", modelCatalog.AvailableModels),-32}                          ║");
-Console.WriteLine($"║  URL:     http://localhost:{port}/v1                             ║");
-Console.WriteLine($"║  Auth:    {(string.IsNullOrEmpty(proxyApiKey) ? "open (no key set)" : "required (PROXY_API_KEY)"),-18} ║");
-Console.WriteLine($"╚══════════════════════════════════════════════════════════════════╝");
+// Start the web server (non-blocking)
+await app.StartAsync();
 
-app.Run();
+// ── Windows Forms UI ────────────────────────────────────────────
+Application.EnableVisualStyles();
+Application.SetCompatibleTextRenderingDefault(false);
+Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
 
+using var mainForm = new AiProxyHub.MainForm(port, app.Services, envVars);
+
+// Redirect all Console output to the form's log box
+var formWriter = new AiProxyHub.FormLogWriter(mainForm);
+app.Services.GetRequiredService<AiProxyHub.TextWriterLoggerProvider>().SetWriter(formWriter);
+Console.SetOut(formWriter);
+Console.SetError(formWriter);
+
+Application.Run(mainForm);
+
+await app.StopAsync();
+await app.DisposeAsync();
 public partial class Program { }
