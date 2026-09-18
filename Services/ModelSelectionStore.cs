@@ -242,7 +242,7 @@ internal sealed class ModelSelectionStore
 
     private static ModelSelectionEntry[] GetDefaultPreferredModelSelections() =>
     [
-        new("deepseek-v4-pro", 1, true, new()),
+        new("deepseek-flash", 1, true, new()),
         new("qwen3-coder-480b-a35b", 2, true, new()),
         new("qwen3.5-397b-a17b", 3, true, new()),
         new("mistral-large-3-675b-instruct-2512", 4, true, new()),

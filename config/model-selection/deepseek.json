@@ -35,7 +35,7 @@
       }
     },
     {
-      "match": "deepseek-v4-flash",
+      "match": "deepseek-flash",
       "priority": 3,
       "enabled": true,
       "execution": {
@@ -46,7 +46,7 @@
         "family": "deepseek",
         "temperature": 0.2,
         "max_tokens": 4096,
-        "reasoning_effort": "medium",
+        "reasoning_effort": "high",
         "timeout_seconds": 90
       }
     }

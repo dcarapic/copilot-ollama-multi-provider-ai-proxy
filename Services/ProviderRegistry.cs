@@ -7,7 +7,7 @@ internal sealed class ProviderRegistry
 
     public ProviderRegistry(ProviderHttpClientFactory httpClientFactory)
     {
-        DefaultModel = Environment.GetEnvironmentVariable("DEEPSEEK_MODEL") ?? "deepseek-v4-pro";
+        DefaultModel = Environment.GetEnvironmentVariable("DEEPSEEK_MODEL") ?? "deepseek-flash";
         DiscoverProviders(httpClientFactory);
 
         if (_providers.Count == 0)

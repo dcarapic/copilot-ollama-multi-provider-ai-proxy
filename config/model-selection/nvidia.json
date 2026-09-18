@@ -97,7 +97,7 @@
       }
     },
     {
-      "match": "deepseek-ai/deepseek-v4-flash",
+      "match": "deepseek-ai/deepseek-flash",
       "priority": 7,
       "enabled": false,
       "execution": {
